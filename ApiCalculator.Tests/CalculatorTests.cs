@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
+using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -10,7 +11,7 @@ using Xunit;
 
 namespace ApiCalculator.Tests
 {
-    [TestCaseOrderer("TestOrderExamples.TestCaseOrdering.PriorityOrderer", "TestOrderExamples")]
+    [TestCaseOrderer("ApiCalculator.Tests.PriorityOrderer", "ApiCalculator.Tests")]
     public class CalculatorTests : IClassFixture<TestFixture<Startup>>
     {
         private HttpClient Client;
@@ -45,11 +46,30 @@ namespace ApiCalculator.Tests
 
             var response = await Client.PostAsync("/api/Authenticate/register", new StringContent(jsonInString, Encoding.UTF8, "application/json"));
 
-            // Act
-            var value = await response.Content.ReadAsStringAsync();
-
             // Assert
-            response.EnsureSuccessStatusCode();
+            if (response.StatusCode == HttpStatusCode.Conflict)
+            {
+                Client = new HttpClient();
+                Client.BaseAddress = new Uri("http://localhost:3688");
+                Client.DefaultRequestHeaders.Accept.Clear();
+                Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                Client.DefaultRequestHeaders.Add("Authorization", $"Bearer");
+
+                LoginModel login = new LoginModel()
+                {
+                    Username = _username,
+                    Password = _password
+                };
+
+                jsonInString = JsonConvert.SerializeObject(login);
+
+                response = await Client.PostAsync("/api/Authenticate/login", new StringContent(jsonInString, Encoding.UTF8, "application/json"));
+
+                // Assert
+                response.EnsureSuccessStatusCode();
+            }
+            else
+                response.EnsureSuccessStatusCode();
         }
 
         [Fact, TestPriority(1)]
@@ -76,10 +96,6 @@ namespace ApiCalculator.Tests
 
             // Assert
             response.EnsureSuccessStatusCode();
-
-            var loginResponse = (JObject)JsonConvert.DeserializeObject(value);
-            _token = loginResponse["token"].Value<string>();
-            //Assert.Equal(result, Convert.ToDecimal(value), 10);
         }
 
         [Fact, TestPriority(10)]
@@ -121,8 +137,12 @@ namespace ApiCalculator.Tests
             deleteResponse.EnsureSuccessStatusCode();
         }
 
-        [Fact, TestPriority(11)]
-        public async Task Test11_PostCalculateDivision()
+        [Theory, TestPriority(11)]
+        [InlineData(1, 2)]
+        [InlineData(-4, -6)]
+        [InlineData(-2, 2)]
+        [InlineData(196, 45)]
+        public async Task Test11_PostCalculateDivision(decimal firstElement, decimal secondElement)
         {
             Client = new HttpClient();
             Client.BaseAddress = new Uri("http://localhost:3688");
@@ -153,9 +173,7 @@ namespace ApiCalculator.Tests
             Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             Client.DefaultRequestHeaders.Add("Authorization", $"Bearer { _token }");
 
-            decimal firstElement = 5;
             string operation = "%2F";
-            decimal secondElement = 2;
             decimal result = firstElement / secondElement;
 
             string queryParameters = $"?firstElement={firstElement}&operation={operation}&secondElement={secondElement}";
@@ -171,8 +189,12 @@ namespace ApiCalculator.Tests
 
         }
 
-        [Fact, TestPriority(12)]
-        public async Task Test12_PostCalculateMultiplication()
+        [Theory, TestPriority(12)]
+        [InlineData(1, 2)]
+        [InlineData(-4, -6)]
+        [InlineData(-2, 2)]
+        [InlineData(196, 45)]
+        public async Task Test12_PostCalculateMultiplication(decimal firstElement, decimal secondElement)
         {
             Client = new HttpClient();
             Client.BaseAddress = new Uri("http://localhost:3688");
@@ -203,9 +225,7 @@ namespace ApiCalculator.Tests
             Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             Client.DefaultRequestHeaders.Add("Authorization", $"Bearer { _token }");
 
-            decimal firstElement = 4;
             string operation = "%2A";
-            decimal secondElement = 7;
             decimal result = firstElement * secondElement;
 
             string queryParameters = $"?firstElement={firstElement}&operation={operation}&secondElement={secondElement}";
@@ -221,8 +241,12 @@ namespace ApiCalculator.Tests
 
         }
 
-        [Fact, TestPriority(13)]
-        public async Task Test13_PostCalculateAddition()
+        [Theory, TestPriority(13)]
+        [InlineData(1, 2)]
+        [InlineData(-4, -6)]
+        [InlineData(-2, 2)]
+        [InlineData(196, 45)]
+        public async Task Test13_PostCalculateAddition(decimal firstElement, decimal secondElement)
         {
             Client = new HttpClient();
             Client.BaseAddress = new Uri("http://localhost:3688");
@@ -253,9 +277,7 @@ namespace ApiCalculator.Tests
             Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             Client.DefaultRequestHeaders.Add("Authorization", $"Bearer { _token }");
 
-            decimal firstElement = 199;
             string operation = "%2B";
-            decimal secondElement = 7;
             decimal result = firstElement + secondElement;
 
             string queryParameters = $"?firstElement={firstElement}&operation={operation}&secondElement={secondElement}";
@@ -271,8 +293,12 @@ namespace ApiCalculator.Tests
 
         }
 
-        [Fact, TestPriority(14)]
-        public async Task Test14_PostCalculateSubtraction()
+        [Theory, TestPriority(14)]
+        [InlineData(1, 2)]
+        [InlineData(-4, -6)]
+        [InlineData(-2, 2)]
+        [InlineData(196, 45)]
+        public async Task Test14_PostCalculateSubtraction(decimal firstElement, decimal secondElement)
         {
             Client = new HttpClient();
             Client.BaseAddress = new Uri("http://localhost:3688");
@@ -303,9 +329,7 @@ namespace ApiCalculator.Tests
             Client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
             Client.DefaultRequestHeaders.Add("Authorization", $"Bearer { _token }");
 
-            decimal firstElement = 199;
             string operation = "-";
-            decimal secondElement = 7;
             decimal result = firstElement - secondElement;
 
             string queryParameters = $"?firstElement={firstElement}&operation={operation}&secondElement={secondElement}";
